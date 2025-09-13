@@ -29,12 +29,15 @@ pipeline {
             }
         }
 
-        stage('Run with Docker Compose') {
-            steps {
-                sh 'docker-compose down'
-                sh 'docker-compose up -d --build'
-            }
-        }
+      stage('Run with Docker Compose') {
+    steps {
+        // Remove old containers, volumes, and orphaned containers
+        sh 'docker-compose down -v --remove-orphans'
+        // Rebuild and start fresh
+        sh 'docker-compose up -d --build'
+    }
+}
+
 
         stage('Verify Containers') {
             steps {
