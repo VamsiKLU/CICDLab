@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        APP_NAME = 'ecommerce'
+        FRONTEND_IMAGE = "ecommerce-frontend"
+        BACKEND_IMAGE = "ecommerce-backend"
     }
 
     stages {
@@ -15,13 +15,17 @@ pipeline {
 
         stage('Build Backend Image') {
             steps {
-                sh 'docker build -t ecommerce-backend -f Dockerfile.backend .'
+                dir('backend') {
+                    sh 'docker build -t $BACKEND_IMAGE -f Dockerfile.backend .'
+                }
             }
         }
 
         stage('Build Frontend Image') {
             steps {
-                sh 'docker build -t ecommerce-frontend -f Dockerfile.frontend .'
+                dir('frontend') {
+                    sh 'docker build -t $FRONTEND_IMAGE -f Dockerfile.frontend .'
+                }
             }
         }
 
