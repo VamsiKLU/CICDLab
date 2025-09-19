@@ -1,7 +1,8 @@
+version: "3.9"
+
 services:
   db:
     image: mysql:8.0
-    container_name: ecom-db
     restart: always
     environment:
       MYSQL_DATABASE: ecommerce
@@ -13,7 +14,7 @@ services:
     networks:
       - ecommerce-net
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,7 +23,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.backend
-    container_name: ecom-backend
     restart: always
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/ecommerce
@@ -41,7 +41,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.frontend
-    container_name: ecom-frontend
     restart: always
     ports:
       - "8082:8080"
