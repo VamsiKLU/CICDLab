@@ -2,19 +2,13 @@ pipeline {
     agent any
 
     environment {
-        // Add any environment variables if needed
-        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
+        DOCKER_BUILDKIT = 1
     }
 
     stages {
-
         stage('Checkout SCM') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[url: 'https://github.com/VamsiKLU/CICDLab.git']]
-                ])
+                checkout scm
             }
         }
 
@@ -37,8 +31,8 @@ pipeline {
         stage('Cleanup Old Containers') {
             steps {
                 sh '''
-                    echo "Removing old containers if they exist..."
-                    docker rm -f ecom-backend ecom-frontend ecom-db || true
+                    echo 'Stopping and removing old containers if they exist...'
+                    docker rm -f ecom-backend ecom-frontend ecommerce-db || true
                     docker-compose down -v --remove-orphans || true
                 '''
             }
@@ -47,7 +41,7 @@ pipeline {
         stage('Run with Docker Compose') {
             steps {
                 sh '''
-                    echo "Starting containers using docker-compose..."
+                    echo 'Starting containers using docker-compose...'
                     docker-compose up -d --build
                 '''
             }
@@ -55,10 +49,12 @@ pipeline {
 
         stage('Verify Containers') {
             steps {
-                sh 'docker ps'
+                sh '''
+                    echo 'Verifying running containers...'
+                    docker ps
+                '''
             }
         }
-
     }
 
     post {
@@ -66,9 +62,11 @@ pipeline {
             echo 'Cleaning up unused Docker images and volumes...'
             sh 'docker system prune -f'
         }
+
         success {
             echo 'Pipeline completed successfully!'
         }
+
         failure {
             echo 'Pipeline failed. Check logs above for errors.'
         }
