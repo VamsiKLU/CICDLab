@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        FRONTEND_IMAGE = "ecommerce-frontend"
-        BACKEND_IMAGE = "ecommerce-backend"
+        FRONTEND_IMAGE = "frontend"
+        BACKEND_IMAGE = "backend"
     }
 
     stages {
