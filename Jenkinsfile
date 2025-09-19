@@ -2,56 +2,54 @@ pipeline {
     agent any
 
     environment {
-        BACKEND_IMAGE = "s109-backend:latest"
-        FRONTEND_IMAGE = "s109-frontend:latest"
+        // Add any environment variables if needed
+        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
     }
 
     stages {
 
         stage('Checkout SCM') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[url: 'https://github.com/VamsiKLU/CICDLab.git']]
+                ])
             }
         }
 
         stage('Build Backend Image') {
-            dir('backend') {
-                steps {
-                    sh 'docker build -t backend -f Dockerfile.backend .'
+            steps {
+                dir('backend') {
+                    sh 'docker build -t s109-backend -f Dockerfile.backend .'
                 }
             }
         }
 
         stage('Build Frontend Image') {
-            dir('frontend') {
-                steps {
-                    sh 'docker build -t frontend -f Dockerfile.frontend .'
+            steps {
+                dir('frontend') {
+                    sh 'docker build -t s109-frontend -f Dockerfile.frontend .'
                 }
             }
         }
 
         stage('Cleanup Old Containers') {
             steps {
-                echo 'Force removing old containers...'
                 sh '''
-                for c in ecom-backend ecom-frontend ecommerce-db; do
-                    if [ $(docker ps -aq -f name=$c) ]; then
-                        echo "Removing container $c..."
-                        docker rm -f $c
-                    else
-                        echo "Container $c does not exist, skipping..."
-                    fi
-                done
-
-                # Remove old networks and orphaned volumes
-                docker-compose down -v --remove-orphans
+                    echo "Removing old containers if they exist..."
+                    docker rm -f ecom-backend ecom-frontend ecom-db || true
+                    docker-compose down -v --remove-orphans || true
                 '''
             }
         }
 
         stage('Run with Docker Compose') {
             steps {
-                sh 'docker-compose up -d --build'
+                sh '''
+                    echo "Starting containers using docker-compose..."
+                    docker-compose up -d --build
+                '''
             }
         }
 
@@ -60,20 +58,19 @@ pipeline {
                 sh 'docker ps'
             }
         }
+
     }
 
     post {
         always {
-            echo 'Cleaning unused images/volumes...'
+            echo 'Cleaning up unused Docker images and volumes...'
             sh 'docker system prune -f'
         }
-
         success {
-            echo 'Pipeline finished successfully!'
+            echo 'Pipeline completed successfully!'
         }
-
         failure {
-            echo 'Pipeline failed. Check logs above for details.'
+            echo 'Pipeline failed. Check logs above for errors.'
         }
     }
 }
