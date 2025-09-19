@@ -1,9 +1,10 @@
-version: '3.8'
+version: "3.9"
 
 services:
   db:
     image: mysql:8.0
-    container_name: s109-db
+    container_name: ecommerce-db
+    restart: always
     environment:
       MYSQL_DATABASE: ecommerce
       MYSQL_ROOT_PASSWORD: root
@@ -11,22 +12,52 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
     container_name: ecommerce-backend
-    ports:
-      - "8083:8080"
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/ecommerce
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    ports:
+      - "8083:9090"   # ✅ Map host port 8083 → container port 9090
+    networks:
+      - ecommerce-net
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
     container_name: ecommerce-frontend
+    restart: always
     ports:
-      - "8082:8080"
+      - "8082:8080"   # ✅ Frontend available at localhost:8082
     depends_on:
       - backend
+    networks:
+      - ecommerce-net
+    environment:
+      # Pass backend URL to frontend (if you use env in frontend app)
+      API_URL: "http://backend:9090"
 
 volumes:
   db_data:
+
+networks:
+  ecommerce-net:
+    driver: bridge
