@@ -2,39 +2,49 @@ pipeline {
     agent any
 
     environment {
-        FRONTEND_IMAGE = "frontend"
-        BACKEND_IMAGE = "backend"
+        BACKEND_IMAGE = "s109-backend:latest"
+        FRONTEND_IMAGE = "s109-frontend:latest"
     }
 
     stages {
-        stage('Checkout Code') {
+
+        stage('Checkout SCM') {
             steps {
-                git branch: 'main', url: 'https://github.com/VamsiKLU/CICDLab.git'
+                checkout scm
             }
         }
 
         stage('Build Backend Image') {
-            steps {
-                dir('backend') {
-                    sh 'docker build -t $BACKEND_IMAGE -f Dockerfile.backend .'
+            dir('backend') {
+                steps {
+                    sh 'docker build -t backend -f Dockerfile.backend .'
                 }
             }
         }
 
         stage('Build Frontend Image') {
-            steps {
-                dir('frontend') {
-                    sh 'docker build -t $FRONTEND_IMAGE -f Dockerfile.frontend .'
+            dir('frontend') {
+                steps {
+                    sh 'docker build -t frontend -f Dockerfile.frontend .'
                 }
             }
         }
 
         stage('Cleanup Old Containers') {
             steps {
+                echo 'Force removing old containers...'
                 sh '''
-                    echo "Force removing old containers..."
-                    docker rm -f ecom-backend ecom-frontend ecom-db || true
-                    docker-compose down -v --remove-orphans || true
+                for c in ecom-backend ecom-frontend ecommerce-db; do
+                    if [ $(docker ps -aq -f name=$c) ]; then
+                        echo "Removing container $c..."
+                        docker rm -f $c
+                    else
+                        echo "Container $c does not exist, skipping..."
+                    fi
+                done
+
+                # Remove old networks and orphaned volumes
+                docker-compose down -v --remove-orphans
                 '''
             }
         }
@@ -54,8 +64,16 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning unused images/volumes..."
+            echo 'Cleaning unused images/volumes...'
             sh 'docker system prune -f'
+        }
+
+        success {
+            echo 'Pipeline finished successfully!'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check logs above for details.'
         }
     }
 }
