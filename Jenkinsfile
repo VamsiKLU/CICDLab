@@ -29,15 +29,21 @@ pipeline {
             }
         }
 
-      stage('Run with Docker Compose') {
-    steps {
-        // Remove old containers, volumes, and orphaned containers
-        sh 'docker-compose down -v --remove-orphans'
-        // Rebuild and start fresh
-        sh 'docker-compose up -d --build'
-    }
-}
+        stage('Cleanup Old Containers') {
+            steps {
+                sh '''
+                    echo "Force removing old containers..."
+                    docker rm -f ecom-backend ecom-frontend ecom-db || true
+                    docker-compose down -v --remove-orphans || true
+                '''
+            }
+        }
 
+        stage('Run with Docker Compose') {
+            steps {
+                sh 'docker-compose up -d --build'
+            }
+        }
 
         stage('Verify Containers') {
             steps {
@@ -48,7 +54,7 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning old containers..."
+            echo "Cleaning unused images/volumes..."
             sh 'docker system prune -f'
         }
     }
